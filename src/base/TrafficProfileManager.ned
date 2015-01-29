@@ -1,4 +1,4 @@
-package rease.base;
+package ddos_simulator.src.base;
 
 //
 // Defines simple module for implementation of traffic profile manager.

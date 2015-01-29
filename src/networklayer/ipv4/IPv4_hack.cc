@@ -1,5 +1,7 @@
 #include <omnetpp.h>
 #include "IPv4_hack.h"
+#include "IPv4ControlInfo_hacked_m.h"
+#include "ARPPacket_m.h"
 
 Define_Module( IPv4_hack);
 
@@ -102,83 +104,45 @@ void IPv4_hack::handleMessage(cMessage *msg)
  *
  * @param msg Received message to be dispatched
  */
-void IPv4_hack::endService(cPacket *msg)
+void IPv4_hack::endService(cPacket *packet)
 {
-    IPv4::endService(msg);
+    if (!isUp) {
+        EV << "IPv4 is down -- discarding message\n";
+        delete packet;
+        return;
+    }
+    if (packet->getArrivalGate()->isName("transportIn")) //TODO packet->getArrivalGate()->getBaseId() == transportInGateBaseId
+    {
+        handlePacketFromHL(packet);
+    }
+    else if (packet->getArrivalGate() == arpInGate)
+    {
+        handlePacketFromARP(packet);
+    }
+    else // from network
+    {
+        const InterfaceEntry *fromIE = getSourceInterfaceFrom(packet);
+        if (dynamic_cast<ARPPacket *>(packet))
+            handleIncomingARPPacket((ARPPacket *)packet, fromIE);
+        else if (dynamic_cast<IPv4Datagram *>(packet))
+            handleIncomingDatagram((IPv4Datagram *)packet, fromIE);
+        else
+            throw cRuntimeError(packet, "Unexpected packet type");
+    }
+
+    if (ev.isGUI())
+        updateDisplayString();
 }
 
-//TODO: edit this function (original from newer INET) to match the ReaSE one
 /**
  * Overloads original method to allow for address spoofing and tagging
  * of attack packets.
  * Original method encapsulates packet from transport layer into
  * IP packet.
  */
-/*
-IPDatagram *IP_hack::encapsulate(cPacket *transportPacket, InterfaceEntry *&destIE)
-{
-    IPControlInfo *controlInfo = check_and_cast<IPControlInfo*> (transportPacket->removeControlInfo());
-
-    IPDatagram_hacked *datagram = new IPDatagram_hacked(transportPacket->getName());
-    datagram->setByteLength(IP_HEADER_BYTES);
-    datagram->encapsulate(transportPacket);
-
-    // set source and destination address
-    IPAddress dest = controlInfo->getDestAddr();
-    datagram->setDestAddress(dest);
-
-    // IP_MULTICAST_IF option, but allow interface selection for unicast packets as well
-    destIE = ift->getInterfaceById(controlInfo->getInterfaceId());
-
-    IPAddress src = controlInfo->getSrcAddr();
-
-    // ReaSE: set the attackTag in case of attack packets
-    if (dynamic_cast<IPControlInfo_hacked*> (controlInfo))
-        datagram->setAttackTag(((IPControlInfo_hacked *) controlInfo)->getAttackTag());
-
-    // when source address was given, use it; otherwise it'll get the address
-    // of the outgoing interface after routing
-    if (!src.isUnspecified())
-    {
-        //if interface parameter does not match existing interface, do not send datagram
-        if (rt->getInterfaceByAddress(src) == NULL)
-        {
-            // ReaSE: now we can apply spoofing
-            if (spoofingAllowed)
-                EV<< "Spoofing Sourceaddress\n";
-                else
-                opp_error("Wrong source address %s in (%s)%s: no interface with such address",
-                        src.str().c_str(), transportPacket->getClassName(), transportPacket->getFullName());
-            }
-            datagram->setSrcAddress(src);
-        }
-
-        // set other fields
-        datagram->setDiffServCodePoint(controlInfo->getDiffServCodePoint());
-
-        datagram->setIdentification(curFragmentId++);
-        datagram->setMoreFragments(false);
-        datagram->setDontFragment (controlInfo->getDontFragment());
-        datagram->setFragmentOffset(0);
-
-        datagram->setTimeToLive(
-                controlInfo->getTimeToLive()> 0 ?
-                controlInfo->getTimeToLive() :
-                (datagram->getDestAddress().isMulticast() ? defaultMCTimeToLive : defaultTimeToLive)
-        );
-
-        datagram->setTransportProtocol(controlInfo->getProtocol());
-        delete controlInfo;
-
-        // setting IP options is currently not supported
-
-        return datagram;
-    }
-
-*/
 IPv4Datagram *IPv4::encapsulate(cPacket *transportPacket, IPv4ControlInfo *controlInfo)
 {
-    IPv4Datagram *datagram = createIPv4Datagram(transportPacket->getName());
+    IPv4Datagram_hacked *datagram = new IPv4Datagram_hacked(transportPacket->getName());
     datagram->setByteLength(IP_HEADER_BYTES);
     datagram->encapsulate(transportPacket);
 
@@ -187,6 +151,10 @@ IPv4Datagram *IPv4::encapsulate(cPacket *transportPacket, IPv4ControlInfo *contr
     datagram->setDestAddress(dest);
 
     IPv4Address src = controlInfo->getSrcAddr();
+
+    // set the attackTag in case of attack packets
+    if (dynamic_cast<IPv4ControlInfo_hacked*> (controlInfo))
+        datagram->setAttackTag(((IPv4ControlInfo_hacked *) controlInfo)->getAttackTag());
 
     // when source address was given, use it; otherwise it'll get the address
     // of the outgoing interface after routing
@@ -223,4 +191,140 @@ IPv4Datagram *IPv4::encapsulate(cPacket *transportPacket, IPv4ControlInfo *contr
     // setting IPv4 options is currently not supported
 
     return datagram;
+}
+
+/**
+ * Invokes encapsulate(), then routePacket().
+ *
+ * This is an exact copy of the original method but it is the only way to
+ * call the encapsulate methode overwritten by this class, which allows for
+ * address spoofing.
+ */
+void IPv4_hack::handlePacketFromHL(cPacket *packet)
+{
+    // if no interface exists, do not send datagram
+        if (ift->getNumInterfaces() == 0)
+        {
+            EV << "No interfaces exist, dropping packet\n";
+            numDropped++;
+            delete packet;
+            return;
+        }
+
+        // encapsulate and send
+        IPv4Datagram *datagram = dynamic_cast<IPv4Datagram *>(packet);
+        IPv4ControlInfo *controlInfo = NULL;
+        //FIXME dubious code, remove? how can the HL tell IP whether it wants tunneling or forwarding?? --Andras
+        if (!datagram) // if HL sends an IPv4Datagram, route the packet
+        {
+            // encapsulate
+            controlInfo = check_and_cast<IPv4ControlInfo*>(packet->removeControlInfo());
+            datagram = encapsulate(packet, controlInfo);
+        }
+
+        // extract requested interface and next hop
+        const InterfaceEntry *destIE = controlInfo ? const_cast<const InterfaceEntry *>(ift->getInterfaceById(controlInfo->getInterfaceId())) : NULL;
+
+        if (controlInfo)
+            datagram->setControlInfo(controlInfo);    //FIXME ne rakjuk bele a cntrInfot!!!!! de kell :( kulonben a hook queue-ban elveszik a multicastloop flag
+
+        // TODO:
+        IPv4Address nextHopAddr(IPv4Address::UNSPECIFIED_ADDRESS);
+        if (datagramLocalOutHook(datagram, destIE, nextHopAddr) == INetfilter::IHook::ACCEPT)
+            datagramLocalOut(datagram, destIE, nextHopAddr);
+}
+
+void IPv4_hack::handleIncomingDatagram(IPv4Datagram *datagram, const InterfaceEntry *fromIE)
+{
+    ASSERT(datagram);
+    ASSERT(fromIE);
+
+    //
+    // "Prerouting"
+    //
+
+    // check for header biterror
+    if (datagram->hasBitError())
+    {
+        // probability of bit error in header = size of header / size of total message
+        // (ignore bit error if in payload)
+        double relativeHeaderLength = datagram->getHeaderLength() / (double)datagram->getByteLength();
+        if (dblrand() <= relativeHeaderLength)
+        {
+            EV << "bit error found, sending ICMP_PARAMETER_PROBLEM\n";
+            icmpAccess.get()->sendErrorMessage(datagram, fromIE->getInterfaceId(), ICMP_PARAMETER_PROBLEM, 0);
+            return;
+        }
+    }
+
+    EV << "Received datagram `" << datagram->getName() << "' with dest=" << datagram->getDestAddress() << "\n";
+
+    const InterfaceEntry *destIE = NULL;
+    IPv4Address nextHop(IPv4Address::UNSPECIFIED_ADDRESS);
+    if (datagramPreRoutingHook(datagram, fromIE, destIE, nextHop) == INetfilter::IHook::ACCEPT)
+        preroutingFinish(datagram, fromIE, destIE, nextHop);
+
+    // ReaSE: check for IP-Options before routing the packet
+    processPacket(datagram, NULL, false, true);
+}
+
+/**
+ * This method is called by handleFromNetwork and does an additional check
+ * for IP options before forwarding the packet.
+ */
+void IPv4_hack::processPacket(IPv4Datagram *datagram, InterfaceEntry *destIE, bool fromHL, bool checkOpts)
+{
+    if (checkOpts && (datagram->getOptionCode() != IPOPTION_NO_OPTION))
+    {
+        // handleIPOption
+        bool sendToControl = false;
+
+        // check for IP-Options
+        // FIXME: RFC says, the datagram could contain more than one option
+        switch (datagram->getOptionCode())
+        {
+            case IPOPTION_END_OF_OPTIONS:
+                break;
+            case IPOPTION_NO_OPTION:
+                break;
+            case IPOPTION_SECURITY:
+                //TODO
+                break;
+            case IPOPTION_LOOSE_SOURCE_ROUTING:
+                //TODO
+                break;
+            case IPOPTION_TIMESTAMP:
+                //TODO
+                break;
+            case IPOPTION_RECORD_ROUTE:
+                //TODO
+                break;
+            case IPOPTION_STREAM_ID:
+                //TODO
+                break;
+            case IPOPTION_STRICT_SOURCE_ROUTING:
+                //TODO
+                break;
+            case IPOPTION_ROUTER_ALERT:
+                //TODO
+                break;
+            default:
+                opp_error("unknown IP option\n");
+        }
+    }
+
+    // process local or remote routing
+    //
+    if (!datagram->getDestAddress().isMulticast())
+        routePacket(datagram, NULL, false);
+    else
+        routeMulticastPacket(datagram, NULL, getSourceInterfaceFrom(datagram));
+}
+
+void IPv4_hack::finish() {
+
+    recordScalar("Total packets", totalPackets);
+    recordScalar("TCP packets", tcpPackets);
+    recordScalar("UDP packets", udpPackets);
+    recordScalar("ICMP packets", icmpPackets);
 }

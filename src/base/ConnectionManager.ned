@@ -1,4 +1,4 @@
-package rease.base;
+package ddos_simulator.src.base;
 
 //
 // Simple module for connection manager 

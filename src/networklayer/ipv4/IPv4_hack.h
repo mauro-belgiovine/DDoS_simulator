@@ -3,6 +3,7 @@
 
 #include <omnetpp.h>
 #include "IPv4.h"
+#include "IPv4Datagram_hacked_m.h"
 
 /**
  * @brief Extension of the original IP protocol.
@@ -32,7 +33,7 @@ public:
     IPv4_hack();
     virtual ~IPv4_hack();
     /// Dispatch received message to correct handler
-    virtual void endService(cPacket *msg);
+    virtual void endService(cPacket *packet);
     void finish();
 protected:
     virtual void initialize();
@@ -41,9 +42,9 @@ protected:
     /// Outputs packet counts into vector file
     virtual void handleMessage(cMessage *msg);
     /// Handle messages from higher layers
-    virtual void handleMessageFromHL(cPacket *msg);
+    virtual void handlePacketFromHL(cPacket *packet);
     /// Handle messages from lower layers
-    virtual void handlePacketFromNetwork(IPv4Datagram *datagram);
+    virtual void handleIncomingDatagram(IPv4Datagram *datagram, const InterfaceEntry *fromIE);
     /// Processing of IP options
     virtual void processPacket(IPv4Datagram *datagram, InterfaceEntry *destIE, bool fromHL, bool checkOpts);
 

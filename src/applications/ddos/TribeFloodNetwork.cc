@@ -4,7 +4,7 @@
 #include "TribeFloodNetwork.h"
 #include "PingPayload_m.h"
 #include "ICMP.h"
-#include "IPControlInfo_hacked_m.h"
+#include "IPv4ControlInfo_hacked_m.h"
 #include "IPv6ControlInfo_hacked_m.h"
 #include "UDPPacket.h"
 #include "UDPControlInfo_m.h"
@@ -346,7 +346,7 @@ void TribeFloodNetwork::handleTCPFlood()
 	// now send packet to ip layer
 	if (!c_victimAddr.isIPv6())
 	{
-		IPControlInfo_hacked *ctrl = new IPControlInfo_hacked();
+		IPv4ControlInfo_hacked *ctrl = new IPv4ControlInfo_hacked();
 		ctrl->setProtocol(IP_PROT_TCP);
 		ctrl->setSrcAddr(sourceAddr.get4());
 		ctrl->setDestAddr(c_victimAddr.get4());
@@ -405,7 +405,7 @@ void TribeFloodNetwork::handleUDPFlood()
 
 	if (!c_victimAddr.isIPv6())
 	{
-		IPControlInfo_hacked *ctrl = new IPControlInfo_hacked();
+		IPv4ControlInfo_hacked *ctrl = new IPv4ControlInfo_hacked();
 		ctrl->setProtocol(IP_PROT_UDP);
 		ctrl->setSrcAddr(sourceAddr.get4());
 		ctrl->setDestAddr(c_victimAddr.get4());
@@ -450,7 +450,7 @@ void TribeFloodNetwork::handlePingFlood()
 
 	if (!c_victimAddr.isIPv6())
 	{
-		IPControlInfo_hacked *ctrl = new IPControlInfo_hacked();
+		IPv4ControlInfo_hacked *ctrl = new IPv4ControlInfo_hacked();
 		ctrl->setProtocol(IP_PROT_ICMP);
 		ctrl->setSrcAddr(sourceAddr.get4());
 		ctrl->setDestAddr(c_victimAddr.get4());
