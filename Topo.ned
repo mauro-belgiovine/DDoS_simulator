@@ -49,7 +49,7 @@ network ClientServer
         }
         channel C_less extends DatarateChannel
         {
-            datarate = 500kbps;
+            datarate = 1Mbps;
             delay = 0.1us;
             per = per;
         }
@@ -69,6 +69,7 @@ network ClientServer
         client1: StandardHost {
             parameters:
                 @display("p=76,158;i=device/pc3");
+                
         }
         client2: StandardHost {
             parameters:
@@ -76,18 +77,18 @@ network ClientServer
         }
         client_zombie: ZombieClient {
             parameters:
-                @display("p=354,421;i=device/pc3");
+                @display("p=354,421;i=device/pc4");
         }
         router: Router {
             @display("p=372,218");
         }
         client_zombie1: ZombieClient {
             parameters:
-                @display("p=437,397;i=device/pc3");
+                @display("p=437,397;i=device/pc4");
         }
         client_zombie2: ZombieClient {
             parameters:
-                @display("p=508,358;i=device/pc3");
+                @display("p=508,358;i=device/pc4");
         }
         client3: StandardHost {
             parameters:
@@ -95,15 +96,15 @@ network ClientServer
         }
         client_zombie3: ZombieClient {
             parameters:
-                @display("p=520,428;i=device/pc3");
+                @display("p=520,428;i=device/pc4");
         }
         client_zombie4: ZombieClient {
             parameters:
-                @display("p=603,404;i=device/pc3");
+                @display("p=603,404;i=device/pc4");
         }
         client_zombie5: ZombieClient {
             parameters:
-                @display("p=674,365;i=device/pc3");
+                @display("p=674,365;i=device/pc4");
         }
     connections:
         client2.pppg++ <--> C <--> router.pppg++;
