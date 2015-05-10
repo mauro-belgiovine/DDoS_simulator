@@ -1,3 +1,3 @@
-package ddos_simulator;
+package ddos46;
 
 @license(LGPL);
