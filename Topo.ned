@@ -16,11 +16,21 @@
 
 
 // *************** TODO: ***************
-// - capire se i client normali riescono a inviare tutti i dati o no
-// - il lavoro dei client normali è interrotto dall'attacco?
-// - gli zombie riescono a saturare la bandwidth del canale in ingresso alla vittima?
+// [OK] - capire se i client normali riescono a inviare tutti i dati o no
+// - il lavoro dei client normali ÔøΩ interrotto dall'attacco?
+// [OK] - gli zombie riescono a saturare la bandwidth del canale in ingresso alla vittima?
 // - visualizzare a video la bandwidth in uso e verificare che la bandwidth in 
 // ingresso della vittima sia saturata (canale C_less), trovare datarate ideale
+// - INTERVALLI DI CONFIDENZA
+
+//NOTE: 
+//1) per ottenere statistiche:
+//	- lanciare simulazione
+//	- da Omnet, aprire il file *.sca/*.vec corrispondente alla run interessata
+//	- generare il file *.anf nella cartella del progetto
+// 	- aprire file anf, spostarsi su scheda "Browse data" (in basso)
+//	- PER LINK UTILIZATION: selezionare i dati busy:vector relativi al channel del server,
+//	  plottare il grafico e APPLICARE time average su dati
 
 
 package ddos46;
@@ -49,7 +59,7 @@ network ClientServer
         }
         channel C_less extends DatarateChannel
         {
-            datarate = 1Mbps;
+            datarate = 5Mbps;
             delay = 0.1us;
             per = per;
         }
@@ -69,7 +79,7 @@ network ClientServer
         client1: StandardHost {
             parameters:
                 @display("p=76,158;i=device/pc3");
-                
+
         }
         client2: StandardHost {
             parameters:
@@ -80,7 +90,7 @@ network ClientServer
                 @display("p=354,421;i=device/pc4");
         }
         router: Router {
-            @display("p=372,218");
+            @display("p=405,158");
         }
         client_zombie1: ZombieClient {
             parameters:
@@ -106,16 +116,20 @@ network ClientServer
             parameters:
                 @display("p=674,365;i=device/pc4");
         }
+        router1: Router {
+            @display("p=438,284");
+        }
     connections:
         client2.pppg++ <--> C <--> router.pppg++;
         client1.pppg++ <--> C <--> router.pppg++;
         router.pppg++ <--> C_less <--> server.pppg++;
-        client_zombie.pppg++ <--> C <--> router.pppg++;
+        client_zombie.pppg++ <--> C <--> router1.pppg++;
         client3.pppg++ <--> C <--> router.pppg++;
-        client_zombie1.pppg++ <--> C <--> router.pppg++;
-        client_zombie2.pppg++ <--> C <--> router.pppg++;
-        client_zombie5.pppg++ <--> C <--> router.pppg++;
-        client_zombie4.pppg++ <--> C <--> router.pppg++;
-        client_zombie3.pppg++ <--> C <--> router.pppg++;
+        client_zombie1.pppg++ <--> C <--> router1.pppg++;
+        client_zombie2.pppg++ <--> C <--> router1.pppg++;
+        client_zombie5.pppg++ <--> C <--> router1.pppg++;
+        client_zombie4.pppg++ <--> C <--> router1.pppg++;
+        client_zombie3.pppg++ <--> C <--> router1.pppg++;
+        router1.pppg++ <--> C <--> router.pppg++;
 }
 
