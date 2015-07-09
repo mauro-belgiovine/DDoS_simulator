@@ -1,0 +1,3 @@
+Per eseguire correttamente il simulatore, procedere con i seguenti passi:
+- sostituire nei sorgenti di inet i file contenuti nelle cartelle pingapp/ e tcpapp/, rispettivamente nei percorsi $OMNETPP_WORKSPACE/inet/src/applications/pingapp/ e $OMNETPP_WORKSPACE/inet/src/applications/tcpapp/;
+- importare il progetto DDoS46/ all'interno di Omnet++;
