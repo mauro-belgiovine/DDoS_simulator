@@ -1,4 +1,4 @@
-# DDoS attack and basic defense mechanism simulation in Omnet++ 4.6
+# DDoS attack and basic defense mechanism simulation
 ![Screenshot](net-screen-example.png)
 ## Instructions (English)
 This code is intended for [Omnet++ 4.6](https://github.com/omnetpp/omnetpp/releases/download/omnetpp-4.6/omnetpp-4.6-src.tgz).
