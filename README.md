@@ -1,5 +1,6 @@
-# Instructions (English)
-
+# DDoS attack and basic defense mechanism simulation in Omnet++ 4.6
+![Screenshot](net-screen-example.png)
+## Instructions (English)
 This code is intended for [Omnet++ 4.6](https://github.com/omnetpp/omnetpp/releases/download/omnetpp-4.6/omnetpp-4.6-src.tgz).
 
 To run the simulator, follow these steps:
@@ -8,7 +9,7 @@ To run the simulator, follow these steps:
   -   `tcpapp/` -> `$OMNETPP_WORKSPACE/inet/src/applications/tcpapp/`
 - import project `DDoS46/` inside Omnet++ 4.6;
 
-# Istruzioni (Italiano)
+## Istruzioni (Italiano)
 
 Questo codice si intende per [Omnet++ 4.6](https://github.com/omnetpp/omnetpp/releases/download/omnetpp-4.6/omnetpp-4.6-src.tgz).
 
